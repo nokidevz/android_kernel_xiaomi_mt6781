@@ -161,7 +161,7 @@ static const struct file_operations incfs_log_file_ops = {
 
 static const struct inode_operations incfs_file_inode_ops = {
 	.setattr = incfs_setattr,
-	.getattr = simple_getattr,
+	.getattr = incfs_getattr,
 	.listxattr = incfs_listxattr
 };
 
@@ -2023,6 +2023,10 @@ static void free_inode(struct inode *inode)
 	kfree(node);
 }
 
+static int incfs_getattr(const struct path *path,
+			 struct kstat *stat, u32 request_mask,
+			 unsigned int query_flags);
+
 static void evict_inode(struct inode *inode)
 {
 	struct inode_info *node = get_incfs_node(inode);
@@ -2079,6 +2083,28 @@ static int incfs_setattr(struct dentry *dentry, struct iattr *ia)
 		ia->ia_mode &= ~0222;
 
 	return simple_setattr(dentry, ia);
+}
+
+static int incfs_getattr(const struct path *path,
+			 struct kstat *stat, u32 request_mask,
+			 unsigned int query_flags)
+{
+	struct inode *inode = d_inode(path->dentry);
+
+	if (IS_VERITY(inode))
+		stat->attributes |= STATX_ATTR_VERITY;
+	stat->attributes_mask |= STATX_ATTR_VERITY;
+	generic_fillattr(inode, stat);
+
+	/*
+	 * TODO: stat->blocks is wrong at this point. It should be number of
+	 * blocks in the backing file. But that information is not (necessarily)
+	 * available yet - incfs_open_dir_file may not have been called.
+	 * Solution is probably to store the backing file block count in an
+	 * xattr whenever it's changed.
+	 */
+
+	return 0;
 }
 
 static ssize_t incfs_getxattr(struct dentry *d, const char *name,
