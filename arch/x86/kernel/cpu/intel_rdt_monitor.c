@@ -255,10 +255,10 @@ static int __mon_event_count(u32 rmid, struct rmid_read *rr)
 		break;
 	default:
 		/*
-		 * Code would never reach here because
-		 * an invalid event id would fail the __rmid_read.
+		 * Code would never reach here because an invalid
+		 * event id would fail the __rmid_read.
 		 */
-		return -EINVAL;
+		return RMID_VAL_ERROR;
 	}
 
 	if (rr->first) {
