@@ -50,6 +50,16 @@ static struct hlist_head *all_lists[] = {
 	NULL,
 };
 
+/*
+ * clk_rate_change_list is used during clk_core_set_rate_nolock() calls to
+ * handle vdd_class vote tracking.  core->rate_change_node is added to
+ * clk_rate_change_list when core->new_rate requires a different voltage level
+ * (core->new_vdd_class_vote) than core->vdd_class_vote.  Elements are removed
+ * from the list after unvoting core->vdd_class_vote immediately before
+ * returning from clk_core_set_rate_nolock().
+ */
+static LIST_HEAD(clk_rate_change_list);
+
 /***    private data structures    ***/
 
 struct clk_core {
