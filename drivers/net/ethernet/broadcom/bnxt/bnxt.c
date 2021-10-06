@@ -634,20 +634,15 @@ next_tx_int:
 	smp_mb();
 
 	if (unlikely(netif_tx_queue_stopped(txq)) &&
-<<<<<<< HEAD
-	    (bnxt_tx_avail(bp, txr) > bp->tx_wake_thresh)) {
-		__netif_tx_lock(txq, smp_processor_id());
-		if (netif_tx_queue_stopped(txq) &&
-		    bnxt_tx_avail(bp, txr) > bp->tx_wake_thresh &&
-		    txr->dev_state != BNXT_DEV_STATE_CLOSING)
-			netif_tx_wake_queue(txq);
-		__netif_tx_unlock(txq);
-	}
-=======
-	    bnxt_tx_avail(bp, txr) >= bp->tx_wake_thresh &&
-	    READ_ONCE(txr->dev_state) != BNXT_DEV_STATE_CLOSING)
-		netif_tx_wake_queue(txq);
->>>>>>> 17280ed74669 (bnxt_en: Fix TX timeout when TX ring size is set to the smallest)
+if (bnxt_tx_avail(bp, txr) > bp->tx_wake_thresh) {
+    __netif_tx_lock(txq, smp_processor_id());
+    if (netif_tx_queue_stopped(txq) &&
+        bnxt_tx_avail(bp, txr) > bp->tx_wake_thresh &&
+        READ_ONCE(txr->dev_state) != BNXT_DEV_STATE_CLOSING) {
+        netif_tx_wake_queue(txq);
+    }
+    __netif_tx_unlock(txq);
+
 }
 
 static struct page *__bnxt_alloc_rx_page(struct bnxt *bp, dma_addr_t *mapping,
