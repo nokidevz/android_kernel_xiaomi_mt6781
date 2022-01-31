@@ -284,9 +284,8 @@ static int innolux_panel_probe(struct mipi_dsi_device *dsi)
 		return err;
 
 	err = mipi_dsi_attach(dsi);
-<<<<<<< HEAD
 	return err;
-=======
+
 	if (err < 0) {
 		innolux = mipi_dsi_get_drvdata(dsi);
 		innolux_panel_del(innolux);
@@ -294,7 +293,6 @@ static int innolux_panel_probe(struct mipi_dsi_device *dsi)
 	}
 
 	return 0;
->>>>>>> 3a2da9078430 (drm/panel: innolux-p079zca: Delete panel on attach() failure)
 }
 
 static int innolux_panel_remove(struct mipi_dsi_device *dsi)
