@@ -1041,6 +1041,7 @@ alternative_else_nop_endif
 	tramp_data_page		x30
 >>>>>>> 266b1ef1368e (arm64: entry: Move the trampoline data page before the text page)
 alternative_insn isb, nop, ARM64_WORKAROUND_QCOM_FALKOR_E1003
+<<<<<<< HEAD
 	tramp_data_read_var	x30, vectors
 	prfm	plil1strm, [x30, #(1b - \vector_start)]
 	msr	vbar_el1, x30
@@ -1048,6 +1049,15 @@ alternative_insn isb, nop, ARM64_WORKAROUND_QCOM_FALKOR_E1003
 =======
 	add	x30, x30, #(1b - tramp_vectors + 4)
 >>>>>>> 87eccd56c52f (arm64: entry: Make the trampoline cleanup optional)
+=======
+	ldr	x30, [x30]
+#else
+	ldr	x30, =vectors
+#endif
+	prfm	plil1strm, [x30, #(1b - \vector_start)]
+	msr	vbar_el1, x30
+	add	x30, x30, #(1b - \vector_start + 4)
+>>>>>>> af484e69b5e8 (arm64: entry: Don't assume tramp_vectors is the start of the vectors)
 	isb
 	.else
 	ldr	x30, =vectors
@@ -1086,11 +1096,16 @@ alternative_endif
 	eret
 	.endm
 
+<<<<<<< HEAD
 	.macro	generate_tramp_vector,	kpti, bhb
+=======
+	.macro	generate_tramp_vector
+>>>>>>> af484e69b5e8 (arm64: entry: Don't assume tramp_vectors is the start of the vectors)
 .Lvector_start\@:
 	.space	0x400
 
 	.rept	4
+<<<<<<< HEAD
 	tramp_ventry	.Lvector_start\@, 64, \kpti, \bhb
 	.endr
 	.rept	4
@@ -1113,6 +1128,18 @@ ENTRY(tramp_vectors)
 	generate_tramp_vector	kpti=1, bhb=BHB_MITIGATION_INSN
 #endif /* CONFIG_MITIGATE_SPECTRE_BRANCH_HISTORY */
 	generate_tramp_vector	kpti=1, bhb=BHB_MITIGATION_NONE
+=======
+	tramp_ventry	.Lvector_start\@, 64
+	.endr
+	.rept	4
+	tramp_ventry	.Lvector_start\@, 32
+	.endr
+	.endm
+
+	.align	11
+ENTRY(tramp_vectors)
+	generate_tramp_vector
+>>>>>>> af484e69b5e8 (arm64: entry: Don't assume tramp_vectors is the start of the vectors)
 END(tramp_vectors)
 
 ENTRY(tramp_exit_native)
