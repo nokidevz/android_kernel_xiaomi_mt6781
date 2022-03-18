@@ -1008,6 +1008,7 @@ alternative_else_nop_endif
 	.macro tramp_ventry, vector_start, regsize, kpti, bhb
 	.align	7
 1:
+	.if	\kpti == 1
 	.if	\regsize == 64
 	msr	tpidrro_el0, x30	// Restored in kernel_ventry
 	.endif
@@ -1056,13 +1057,17 @@ alternative_insn isb, nop, ARM64_WORKAROUND_QCOM_FALKOR_E1003
 #endif
 	prfm	plil1strm, [x30, #(1b - \vector_start)]
 	msr	vbar_el1, x30
+<<<<<<< HEAD
 	add	x30, x30, #(1b - \vector_start + 4)
 >>>>>>> af484e69b5e8 (arm64: entry: Don't assume tramp_vectors is the start of the vectors)
+=======
+>>>>>>> 9e056623dfc5 (arm64: entry: Make the kpti trampoline's kpti sequence optional)
 	isb
 	.else
 	ldr	x30, =vectors
 	.endif // \kpti == 1
 
+<<<<<<< HEAD
 	.if	\bhb == BHB_MITIGATION_FW
 	/*
 	 * The firmware sequence must appear before the first indirect branch.
@@ -1072,6 +1077,8 @@ alternative_insn isb, nop, ARM64_WORKAROUND_QCOM_FALKOR_E1003
 	__mitigate_spectre_bhb_fw
 	.endif // \bhb == BHB_MITIGATION_FW
 
+=======
+>>>>>>> 9e056623dfc5 (arm64: entry: Make the kpti trampoline's kpti sequence optional)
 	add	x30, x30, #(1b - \vector_start + 4)
 	ret
 .org 1b + 128	// Did we overflow the ventry slot?
@@ -1097,14 +1104,19 @@ alternative_endif
 	.endm
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 	.macro	generate_tramp_vector,	kpti, bhb
 =======
 	.macro	generate_tramp_vector
 >>>>>>> af484e69b5e8 (arm64: entry: Don't assume tramp_vectors is the start of the vectors)
+=======
+	.macro	generate_tramp_vector,	kpti
+>>>>>>> 9e056623dfc5 (arm64: entry: Make the kpti trampoline's kpti sequence optional)
 .Lvector_start\@:
 	.space	0x400
 
 	.rept	4
+<<<<<<< HEAD
 <<<<<<< HEAD
 	tramp_ventry	.Lvector_start\@, 64, \kpti, \bhb
 	.endr
@@ -1130,9 +1142,12 @@ ENTRY(tramp_vectors)
 	generate_tramp_vector	kpti=1, bhb=BHB_MITIGATION_NONE
 =======
 	tramp_ventry	.Lvector_start\@, 64
+=======
+	tramp_ventry	.Lvector_start\@, 64, \kpti
+>>>>>>> 9e056623dfc5 (arm64: entry: Make the kpti trampoline's kpti sequence optional)
 	.endr
 	.rept	4
-	tramp_ventry	.Lvector_start\@, 32
+	tramp_ventry	.Lvector_start\@, 32, \kpti
 	.endr
 	.endm
 
@@ -1143,8 +1158,12 @@ ENTRY(tramp_vectors)
 	.pushsection ".entry.tramp.text", "ax"
 	.align	11
 ENTRY(tramp_vectors)
+<<<<<<< HEAD
 	generate_tramp_vector
 >>>>>>> af484e69b5e8 (arm64: entry: Don't assume tramp_vectors is the start of the vectors)
+=======
+	generate_tramp_vector	kpti=1
+>>>>>>> 9e056623dfc5 (arm64: entry: Make the kpti trampoline's kpti sequence optional)
 END(tramp_vectors)
 
 ENTRY(tramp_exit_native)
