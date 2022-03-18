@@ -1039,6 +1039,10 @@ alternative_insn isb, nop, ARM64_WORKAROUND_QCOM_FALKOR_E1003
 	tramp_data_read_var	x30, vectors
 	prfm	plil1strm, [x30, #(1b - \vector_start)]
 	msr	vbar_el1, x30
+<<<<<<< HEAD
+=======
+	add	x30, x30, #(1b - tramp_vectors + 4)
+>>>>>>> 87eccd56c52f (arm64: entry: Make the trampoline cleanup optional)
 	isb
 	.else
 	ldr	x30, =vectors
