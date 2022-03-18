@@ -1035,6 +1035,11 @@ alternative_else_nop_endif
 	b	.
 2:
 	tramp_map_kernel	x30
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_RANDOMIZE_BASE
+	tramp_data_page		x30
+>>>>>>> 266b1ef1368e (arm64: entry: Move the trampoline data page before the text page)
 alternative_insn isb, nop, ARM64_WORKAROUND_QCOM_FALKOR_E1003
 	tramp_data_read_var	x30, vectors
 	prfm	plil1strm, [x30, #(1b - \vector_start)]
@@ -1265,7 +1270,17 @@ ENTRY(__sdei_asm_entry_trampoline)
 	 */
 1:	str	x4, [x1, #(SDEI_EVENT_INTREGS + S_ORIG_ADDR_LIMIT)]
 
+<<<<<<< HEAD
 	tramp_data_read_var     x4, __sdei_asm_handler
+=======
+#ifdef CONFIG_RANDOMIZE_BASE
+	tramp_data_page		x4
+	add	x4, x4, #:lo12:__sdei_asm_trampoline_next_handler
+	ldr	x4, [x4]
+#else
+	ldr	x4, =__sdei_asm_handler
+#endif
+>>>>>>> 266b1ef1368e (arm64: entry: Move the trampoline data page before the text page)
 	br	x4
 ENDPROC(__sdei_asm_entry_trampoline)
 NOKPROBE(__sdei_asm_entry_trampoline)
