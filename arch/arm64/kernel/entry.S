@@ -1008,7 +1008,6 @@ alternative_else_nop_endif
 	.macro tramp_ventry, vector_start, regsize, kpti, bhb
 	.align	7
 1:
-	.if	\kpti == 1
 	.if	\regsize == 64
 	msr	tpidrro_el0, x30	// Restored in kernel_ventry
 	.endif
@@ -1036,38 +1035,15 @@ alternative_else_nop_endif
 	b	.
 2:
 	tramp_map_kernel	x30
-<<<<<<< HEAD
-=======
-#ifdef CONFIG_RANDOMIZE_BASE
-	tramp_data_page		x30
->>>>>>> 266b1ef1368e (arm64: entry: Move the trampoline data page before the text page)
 alternative_insn isb, nop, ARM64_WORKAROUND_QCOM_FALKOR_E1003
-<<<<<<< HEAD
 	tramp_data_read_var	x30, vectors
 	prfm	plil1strm, [x30, #(1b - \vector_start)]
 	msr	vbar_el1, x30
-<<<<<<< HEAD
-=======
-	add	x30, x30, #(1b - tramp_vectors + 4)
->>>>>>> 87eccd56c52f (arm64: entry: Make the trampoline cleanup optional)
-=======
-	ldr	x30, [x30]
-#else
-	ldr	x30, =vectors
-#endif
-	prfm	plil1strm, [x30, #(1b - \vector_start)]
-	msr	vbar_el1, x30
-<<<<<<< HEAD
-	add	x30, x30, #(1b - \vector_start + 4)
->>>>>>> af484e69b5e8 (arm64: entry: Don't assume tramp_vectors is the start of the vectors)
-=======
->>>>>>> 9e056623dfc5 (arm64: entry: Make the kpti trampoline's kpti sequence optional)
 	isb
 	.else
 	ldr	x30, =vectors
 	.endif // \kpti == 1
 
-<<<<<<< HEAD
 	.if	\bhb == BHB_MITIGATION_FW
 	/*
 	 * The firmware sequence must appear before the first indirect branch.
@@ -1077,8 +1053,6 @@ alternative_insn isb, nop, ARM64_WORKAROUND_QCOM_FALKOR_E1003
 	__mitigate_spectre_bhb_fw
 	.endif // \bhb == BHB_MITIGATION_FW
 
-=======
->>>>>>> 9e056623dfc5 (arm64: entry: Make the kpti trampoline's kpti sequence optional)
 	add	x30, x30, #(1b - \vector_start + 4)
 	ret
 .org 1b + 128	// Did we overflow the ventry slot?
@@ -1103,21 +1077,11 @@ alternative_endif
 	eret
 	.endm
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 	.macro	generate_tramp_vector,	kpti, bhb
-=======
-	.macro	generate_tramp_vector
->>>>>>> af484e69b5e8 (arm64: entry: Don't assume tramp_vectors is the start of the vectors)
-=======
-	.macro	generate_tramp_vector,	kpti
->>>>>>> 9e056623dfc5 (arm64: entry: Make the kpti trampoline's kpti sequence optional)
 .Lvector_start\@:
 	.space	0x400
 
 	.rept	4
-<<<<<<< HEAD
-<<<<<<< HEAD
 	tramp_ventry	.Lvector_start\@, 64, \kpti, \bhb
 	.endr
 	.rept	4
@@ -1140,30 +1104,6 @@ ENTRY(tramp_vectors)
 	generate_tramp_vector	kpti=1, bhb=BHB_MITIGATION_INSN
 #endif /* CONFIG_MITIGATE_SPECTRE_BRANCH_HISTORY */
 	generate_tramp_vector	kpti=1, bhb=BHB_MITIGATION_NONE
-=======
-	tramp_ventry	.Lvector_start\@, 64
-=======
-	tramp_ventry	.Lvector_start\@, 64, \kpti
->>>>>>> 9e056623dfc5 (arm64: entry: Make the kpti trampoline's kpti sequence optional)
-	.endr
-	.rept	4
-	tramp_ventry	.Lvector_start\@, 32, \kpti
-	.endr
-	.endm
-
-#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
-/*
- * Exception vectors trampoline.
- */
-	.pushsection ".entry.tramp.text", "ax"
-	.align	11
-ENTRY(tramp_vectors)
-<<<<<<< HEAD
-	generate_tramp_vector
->>>>>>> af484e69b5e8 (arm64: entry: Don't assume tramp_vectors is the start of the vectors)
-=======
-	generate_tramp_vector	kpti=1
->>>>>>> 9e056623dfc5 (arm64: entry: Make the kpti trampoline's kpti sequence optional)
 END(tramp_vectors)
 
 ENTRY(tramp_exit_native)
@@ -1321,17 +1261,7 @@ ENTRY(__sdei_asm_entry_trampoline)
 	 */
 1:	str	x4, [x1, #(SDEI_EVENT_INTREGS + S_ORIG_ADDR_LIMIT)]
 
-<<<<<<< HEAD
 	tramp_data_read_var     x4, __sdei_asm_handler
-=======
-#ifdef CONFIG_RANDOMIZE_BASE
-	tramp_data_page		x4
-	add	x4, x4, #:lo12:__sdei_asm_trampoline_next_handler
-	ldr	x4, [x4]
-#else
-	ldr	x4, =__sdei_asm_handler
-#endif
->>>>>>> 266b1ef1368e (arm64: entry: Move the trampoline data page before the text page)
 	br	x4
 ENDPROC(__sdei_asm_entry_trampoline)
 NOKPROBE(__sdei_asm_entry_trampoline)
