@@ -106,8 +106,8 @@ int nfc_dev_up(struct nfc_dev *dev)
 
 	device_lock(&dev->dev);
 
-	if (dev->rfkill && rfkill_blocked(dev->rfkill)) {
-		rc = -ERFKILL;
+	if (dev->shutting_down) {
+		rc = -ENODEV;
 		goto error;
 	}
 
