@@ -90,6 +90,7 @@ exit:
 
 static void msg_submit(struct mbox_chan *chan)
 {
+	unsigned long flags;
 	int err = 0;
 
 	/*
@@ -103,7 +104,6 @@ static void msg_submit(struct mbox_chan *chan)
 		err = __msg_submit(chan);
 	} while (err == -EAGAIN);
 
-	/* kick start the timer immediately to avoid delays */
 	if (!err && (chan->txdone_method & TXDONE_BY_POLL)) {
 		/* kick start the timer immediately to avoid delays */
 		spin_lock_irqsave(&chan->mbox->poll_hrt_lock, flags);
