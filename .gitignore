@@ -142,3 +142,7 @@ kernel/configs/android-*.cfg
 /los-4.9-64/
 /AnyKernel/
 /modules/
+
+# Toolchains
+build.sh
+toolchains
