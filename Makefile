@@ -729,10 +729,6 @@ KBUILD_CFLAGS += $(call cc-option,-fno-reorder-blocks,) \
                  $(call cc-option,-fno-partial-inlining)
 endif
 
-ifneq ($(CONFIG_FRAME_WARN),0)
-KBUILD_CFLAGS += $(call cc-option,-Wframe-larger-than=${CONFIG_FRAME_WARN})
-endif
-
 stackp-flags-$(CONFIG_CC_HAS_STACKPROTECTOR_NONE) := -fno-stack-protector
 stackp-flags-$(CONFIG_STACKPROTECTOR)             := -fstack-protector
 stackp-flags-$(CONFIG_STACKPROTECTOR_STRONG)      := -fstack-protector-strong
@@ -974,6 +970,27 @@ KBUILD_CFLAGS += $(call cc-disable-warning, unused-function)
 
 # disable warning -Wunused-variable
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-variable)
+
+# disable warning -Wmacro-redefined
+KBUILD_CFLAGS += $(call cc-disable-warning, macro-redefined)
+
+# disable warning -Wunused-label
+KBUILD_CFLAGS += $(call cc-disable-warning, unused-label)
+
+# disable warning -Wduplicate-decl-specifier
+KBUILD_CFLAGS += $(call cc-disable-warning, duplicate-decl-specifier)
+
+# disable warning -Wcompare-distinct-pointer-types
+KBUILD_CFLAGS += $(call cc-disable-warning, compare-distinct-pointer-types)
+
+# disable warning -Wdeclaration-after-statement
+KBUILD_CFLAGS += $(call cc-disable-warning, declaration-after-statement)
+
+# disable warning -Wframe-larger-than=
+KBUILD_CFLAGS += $(call cc-disable-warning, frame-larger-than)
+
+# disable warning -Wlogical-op-parentheses
+KBUILD_CFLAGS += $(call cc-disable-warning, logical-op-parentheses)
 
 # disable invalid "can't wrap" optimizations for signed / pointers
 KBUILD_CFLAGS	+= $(call cc-option,-fno-strict-overflow)
