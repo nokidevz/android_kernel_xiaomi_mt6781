@@ -275,26 +275,6 @@
 #define FTS_MODULE_NAME                        "samsung"
 #define FTS_MODULE2_NAME                       ""
 #define FTS_MODULE3_NAME                       ""
-
-/*
- * FW.i file for auto upgrade, you must replace it with your own
- * define your own fw_file, the sample one to be replaced is invalid
- * NOTE: if FTS_GET_MODULE_NUM > 1, it's the fw corresponding with FTS_VENDOR_ID
- */
-#define FTS_UPGRADE_FW_FILE                      "include/firmware/fw_sample.i"
-
-/*
- * if FTS_GET_MODULE_NUM >= 2, fw corrsponding with FTS_VENDOR_ID2
- * define your own fw_file, the sample one is invalid
- */
-#define FTS_UPGRADE_FW2_FILE                     "include/firmware/fw_sample.i"
-
-/*
- * if FTS_GET_MODULE_NUM >= 3, fw corrsponding with FTS_VENDOR_ID3
- * define your own fw_file, the sample one is invalid
- */
-#define FTS_UPGRADE_FW3_FILE                     "include/firmware/fw_sample.i"
-
 /*********************************************************/
 
 #endif /* _LINUX_FOCLATECH_CONFIG_H_ */
