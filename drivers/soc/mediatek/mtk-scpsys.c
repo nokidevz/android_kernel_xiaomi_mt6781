@@ -559,12 +559,226 @@ out:
 	return ret;
 }
 
+static int scpsys_md_power_on(struct generic_pm_domain *genpd)
+{
+	struct scp_domain *scpd = container_of(genpd, struct scp_domain, genpd);
+	struct scp *scp = scpd->scp;
+	void __iomem *ctl_addr = scp->base + scpd->data->ctl_offs;
+	u32 val;
+	int ret, tmp;
+
+	ret = scpsys_regulator_enable(scpd);
+	if (ret < 0)
+		return ret;
+
+	scpsys_extb_iso_down(scpd);
+
+	ret = scpsys_clk_enable(scpd->clk, MAX_CLKS);
+	if (ret)
+		goto err_clk;
+
+	/* for md subsys, reset_b is prior to power_on bit */
+	val = readl(ctl_addr);
+	val |= PWR_RST_B_BIT;
+	writel(val, ctl_addr);
+
+	/* subsys power on */
+	val |= PWR_ON_BIT;
+	writel(val, ctl_addr);
+
+	/* wait until PWR_ACK = 1 */
+	ret = readx_poll_timeout(scpsys_md_domain_is_on, scpd, tmp, tmp > 0,
+				 MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
+	if (ret < 0)
+		goto err_pwr_ack;
+
+	if (MTK_SCPD_CAPS(scpd, MTK_SCPD_STRICT_BUSP)) {
+		/*
+		 * In few Mediatek platforms(e.g. MT6779), the bus protect
+		 * policy is stricter, which leads to bus protect release must
+		 * be prior to bus access.
+		 */
+		ret = scpsys_sram_enable(scpd, ctl_addr);
+		if (ret < 0)
+			goto err_pwr_ack;
+
+		ret = scpsys_bus_protect_disable(scpd);
+		if (ret < 0)
+			goto err_pwr_ack;
+
+		ret = scpsys_clk_enable(scpd->subsys_clk, MAX_SUBSYS_CLKS);
+		if (ret < 0)
+			goto err_pwr_ack;
+	} else {
+		ret = scpsys_clk_enable(scpd->subsys_clk, MAX_SUBSYS_CLKS);
+		if (ret < 0)
+			goto err_pwr_ack;
+
+		ret = scpsys_sram_enable(scpd, ctl_addr);
+		if (ret < 0)
+			goto err_sram;
+
+		ret = scpsys_bus_protect_disable(scpd);
+		if (ret < 0)
+			goto err_sram;
+	}
+
+	return 0;
+
+err_sram:
+	scpsys_clk_disable(scpd->subsys_clk, MAX_SUBSYS_CLKS);
+err_pwr_ack:
+	scpsys_clk_disable(scpd->clk, MAX_CLKS);
+err_clk:
+	scpsys_extb_iso_up(scpd);
+	scpsys_regulator_disable(scpd);
+
+	dev_err(scp->dev, "Failed to power on domain %s\n", genpd->name);
+
+	return ret;
+}
+
+static int scpsys_md_power_off(struct generic_pm_domain *genpd)
+{
+	struct scp_domain *scpd = container_of(genpd, struct scp_domain, genpd);
+	struct scp *scp = scpd->scp;
+	void __iomem *ctl_addr = scp->base + scpd->data->ctl_offs;
+	u32 val;
+	int ret, tmp;
+
+	ret = scpsys_bus_protect_enable(scpd);
+	if (ret < 0)
+		goto out;
+
+	ret = scpsys_sram_disable(scpd, ctl_addr);
+	if (ret < 0)
+		goto out;
+
+	scpsys_clk_disable(scpd->subsys_clk, MAX_SUBSYS_CLKS);
+
+	/* subsys power off */
+	val = readl(ctl_addr) & ~PWR_ON_BIT;
+	writel(val, ctl_addr);
+
+	/* wait until PWR_ACK = 0 */
+	ret = readx_poll_timeout(scpsys_domain_is_on, scpd, tmp, tmp == 0,
+				 MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
+	if (ret < 0)
+		goto out;
+
+	/* for md subsys, the isolation is prior to RST_B operation */
+	scpsys_extb_iso_up(scpd);
+
+	val &= ~PWR_RST_B_BIT;
+	writel(val, ctl_addr);
+
+	scpsys_clk_disable(scpd->clk, MAX_CLKS);
+
+	ret = scpsys_regulator_disable(scpd);
+	if (ret < 0)
+		goto out;
+
+	return 0;
+
+out:
+	dev_err(scp->dev, "Failed to power off domain %s\n", genpd->name);
+
+	return ret;
+}
+
+static int init_subsys_clks(struct platform_device *pdev,
+		const char *prefix, struct clk **clk)
+{
+	struct device_node *node = pdev->dev.of_node;
+	u32 prefix_len, sub_clk_cnt = 0;
+	struct property *prop;
+	const char *clk_name;
+
+	if (!node) {
+		dev_err(&pdev->dev, "Cannot find scpsys node: %ld\n",
+			PTR_ERR(node));
+		return PTR_ERR(node);
+	}
+
+	prefix_len = strlen(prefix);
+
+	of_property_for_each_string(node, "clock-names", prop, clk_name) {
+		if (!strncmp(clk_name, prefix, prefix_len) &&
+				(clk_name[prefix_len] == '-')) {
+			if (sub_clk_cnt >= MAX_SUBSYS_CLKS) {
+				dev_err(&pdev->dev,
+					"subsys clk out of range %d\n",
+					sub_clk_cnt);
+				return -ENOMEM;
+			}
+
+			clk[sub_clk_cnt] = devm_clk_get(&pdev->dev,
+						clk_name);
+
+			if (IS_ERR(clk)) {
+				dev_err(&pdev->dev,
+					"Subsys clk read fail %ld\n",
+					PTR_ERR(clk));
+				return PTR_ERR(clk);
+			}
+			sub_clk_cnt++;
+		}
+	}
+
+	return sub_clk_cnt;
+}
+
 static void init_clks(struct platform_device *pdev, struct clk **clk)
 {
 	int i;
 
 	for (i = CLK_NONE + 1; i < CLK_MAX; i++)
 		clk[i] = devm_clk_get(&pdev->dev, clk_names[i]);
+}
+
+static int mtk_pd_set_performance(struct generic_pm_domain *genpd,
+				  unsigned int state)
+{
+	int i;
+	struct scp_domain *scpd =
+		container_of(genpd, struct scp_domain, genpd);
+	struct scp_event_data scpe;
+	struct scp *scp = scpd->scp;
+	struct genpd_onecell_data *pd_data = &scp->pd_data;
+
+	for (i = 0; i < pd_data->num_domains; i++) {
+		if (genpd == pd_data->domains[i]) {
+			dev_dbg(scp->dev, "%d. %s = %d\n",
+				i, genpd->name, state);
+			break;
+		}
+	}
+
+	if (i == pd_data->num_domains)
+		return 0;
+
+	scpe.event_type = MTK_SCPSYS_PSTATE;
+	scpe.genpd = genpd;
+	scpe.domain_id = i;
+	blocking_notifier_call_chain(&scpsys_notifier_list, state, &scpe);
+
+	return 0;
+}
+
+static unsigned int mtk_pd_get_performance(struct generic_pm_domain *genpd,
+					   struct dev_pm_opp *opp)
+{
+	struct device_node *np;
+	unsigned int val = 0;
+
+	np = dev_pm_opp_get_of_node(opp);
+
+	if (np) {
+		of_property_read_u32(np, "opp-level", &val);
+		of_node_put(np);
+	}
+
+	return val;
 }
 
 static struct scp *init_scp(struct platform_device *pdev,
@@ -574,7 +788,7 @@ static struct scp *init_scp(struct platform_device *pdev,
 {
 	struct genpd_onecell_data *pd_data;
 	struct resource *res;
-	int i, j;
+	int i, j, count;
 	struct scp *scp;
 	struct clk *clk[CLK_MAX];
 
