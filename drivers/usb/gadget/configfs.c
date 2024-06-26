@@ -1527,34 +1527,7 @@ static void android_work(struct work_struct *data)
 			gi->connected, gi->sw_connected, cdev->config);
 	}
 }
-#endif
-
-static void configfs_composite_unbind(struct usb_gadget *gadget)
-{
-	struct usb_composite_dev	*cdev;
-	struct gadget_info		*gi;
-	unsigned long flags;
-
-	/* the gi->lock is hold by the caller */
-
-	cdev = get_gadget_data(gadget);
-	gi = container_of(cdev, struct gadget_info, cdev);
-	spin_lock_irqsave(&gi->spinlock, flags);
-	gi->unbind = 1;
-	spin_unlock_irqrestore(&gi->spinlock, flags);
-
-	kfree(otg_desc[0]);
-	otg_desc[0] = NULL;
-	purge_configs_funcs(gi);
-	composite_dev_cleanup(cdev);
-	usb_ep_autoconfig_reset(cdev->gadget);
-	spin_lock_irqsave(&gi->spinlock, flags);
-	cdev->gadget = NULL;
-	cdev->deactivations = 0;
-	gadget->deactivated = false;
-	set_gadget_data(gadget, NULL);
-	spin_unlock_irqrestore(&gi->spinlock, flags);
-}
+#else
 
 static int configfs_composite_setup(struct usb_gadget *gadget,
 		const struct usb_ctrlrequest *ctrl)
@@ -1602,6 +1575,7 @@ static void configfs_composite_disconnect(struct usb_gadget *gadget)
 	composite_disconnect(gadget);
 	spin_unlock_irqrestore(&gi->spinlock, flags);
 }
+#endif
 
 static void configfs_composite_unbind(struct usb_gadget *gadget)
 {
@@ -1609,7 +1583,6 @@ static void configfs_composite_unbind(struct usb_gadget *gadget)
 	struct gadget_info		*gi;
 	unsigned long flags;
 
-	pr_info("%s\n", __func__);
 	/* the gi->lock is hold by the caller */
 
 	cdev = get_gadget_data(gadget);
@@ -1625,6 +1598,8 @@ static void configfs_composite_unbind(struct usb_gadget *gadget)
 	usb_ep_autoconfig_reset(cdev->gadget);
 	spin_lock_irqsave(&gi->spinlock, flags);
 	cdev->gadget = NULL;
+	cdev->deactivations = 0;
+	gadget->deactivated = false;
 	set_gadget_data(gadget, NULL);
 	spin_unlock_irqrestore(&gi->spinlock, flags);
 }
